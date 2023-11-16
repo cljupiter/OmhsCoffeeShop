@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Order;
+use App\Rules\OrderCountToday;
 use App\Enums\Activity;
 use App\Enums\OrderType;
 use App\Rules\ValidJsonOrder;
@@ -62,6 +64,8 @@ class OrderRequest extends FormRequest
                 $validator->errors()->add('order_type', 'This order type is disabled now you can try another order type right now or call the management.');
             } else if (blank(request('order_type'))) {
                 $validator->errors()->add('order_type', 'This order type is disabled now you can try another order type right now or call the management.');
+            } else if(Order::whereDate("order_datetime", now()->toDateString())->count() > 0) {
+                $validator->errors()->add('order_count_today', 'You cannot order today anymore.');
             }
         });
     }
