@@ -3,7 +3,6 @@
 namespace App\Http\Requests;
 
 use App\Models\Order;
-use App\Rules\OrderCountToday;
 use App\Enums\Activity;
 use App\Enums\OrderType;
 use App\Rules\ValidJsonOrder;
