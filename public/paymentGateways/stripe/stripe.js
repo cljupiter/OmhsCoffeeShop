@@ -1,60 +1,84 @@
 if (stripeKey) {
     let stripe = Stripe(stripeKey);
+    let elements;
 
-    let style = {
-        base: {
-            fontSize: "16px",
-            color: "#32325d",
-            border: "1px solid red",
-        },
-    };
+    initialize();
+    checkStatus();
 
-    // let card = elements.create('card', {style: style});
-    // card.mount('#card-element');
+    async function initialize() {
+        const { clientSecret } = await fetch(orderRoute, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Accept: "application/json",
+                "X-CSRF-TOKEN": document
+                    .querySelector('meta[name="csrf-token"]')
+                    .getAttribute("content"),
+            },
+            body: JSON.stringify({
+                paymentMethod: "stripe",
+            }),
+        }).then((r) => r.json());
 
-    // const cardNumber = elements.create('cardNumber');
-    // cardNumber.mount('#card-number');
+        elements = stripe.elements({ clientSecret });
 
-    // const cardExpiration = elements.create('cardExpiry');
-    // cardExpiration.mount('#card-expiration');
+        const paymentElementOptions = {
+            layout: "tabs",
+        };
 
-    // const cardCvc = elements.create('cardCvc');
-    // cardCvc.mount('#card-cvc');
+        const paymentElement = elements.create(
+            "payment",
+            paymentElementOptions
+        );
+        paymentElement.mount("#payment-element");
+    }
 
-    const options = {
-        mode: "setup",
-        currency: "usd",
-        // Fully customizable with appearance API.
-        appearance: {
-            /*...*/
-        },
-    };
-    const elements = stripe.elements(options);
-    const paymentElement = elements.create("payment");
-    paymentElement.mount("#payment-element");
+    async function checkStatus() {
+        const clientSecret = new URLSearchParams(window.location.search).get(
+            "payment_intent_client_secret"
+        );
+
+        if (!clientSecret) {
+            return;
+        }
+
+        const { paymentIntent } = await stripe.retrievePaymentIntent(
+            clientSecret
+        );
+
+        switch (paymentIntent.status) {
+            case "succeeded":
+                window.location.href = returnURL.replace(
+                    "transaction_no",
+                    paymentIntent.id
+                );
+                break;
+            case "processing":
+                break;
+            case "requires_payment_method":
+                break;
+            default:
+                break;
+        }
+    }
 
     function stripe_payment() {
         $("#payment_method").parent().removeClass("has-error");
         stripe
-            .confirmPayment(elements)
+            .confirmPayment({
+                elements,
+                confirmParams: {
+                    return_url: window.location.href,
+                },
+            })
             .then(function (result) {
-                console.log(result, "123123");
-                if (result.error) {
-                    let errorElement = document.getElementById("card-errors");
-                    errorElement.textContent = result.error.message;
-                } else {
-                    stripeTokenHandler(result.token);
-                }
+                console.log(result);
+                // let errorElement = document.getElementById("card-errors");
+                // if (error.type === "card_error" || error.type === "validation_error") {
+                //     errorElement.textContent = error.message;
+                //   } else {
+                //     errorElement.textContent = "An unexpected error occurred.";
+                //   }
             });
-    }
-
-    function stripeTokenHandler(token) {
-        let form = document.getElementById("paymentForm");
-        let hiddenInput = document.createElement("input");
-        hiddenInput.setAttribute("type", "hidden");
-        hiddenInput.setAttribute("name", "stripeToken");
-        hiddenInput.setAttribute("value", token.id);
-        form.appendChild(hiddenInput);
-        form.submit();
     }
 }

@@ -9,8 +9,6 @@
 
 <script src="https://js.stripe.com/v3/"></script>
 <script>
-    const stripeKey = '<?= $stripeKey ?>';
-    const orderRoute = '<?= route('payment.store', ['order' => $order]) ?>';
-    const returnURL = '<?= route('payment.stripe.successful', ['order' => $order, 'transaction_no' => "transaction_no"]) ?>';
+    const stripeKey = '<?=$stripeKey?>';
 </script>
-<script defer src="{{ asset('paymentGateways/stripe/stripe.js') }}"></script>
+<script src="{{ asset('paymentGateways/stripe/stripe.js') }}"></script>

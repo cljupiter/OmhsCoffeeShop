@@ -15,39 +15,42 @@ use App\Services\PaymentManagerService;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Smartisan\Settings\Facades\Settings;
+use Stripe as StripeClient;
+use App\Services\PaymentService;
 
 class PaymentController extends Controller
 {
     private PaymentManagerService $paymentManagerService;
-
+    public $paymentService;
     public function __construct(PaymentManagerService $paymentManagerService)
     {
+        $this->paymentService = new PaymentService();
         $this->paymentManagerService = $paymentManagerService;
     }
 
     public function index(
         Order $order
-    ): \Illuminate\Contracts\View\Factory | \Illuminate\Contracts\View\View | \Illuminate\Contracts\Foundation\Application | \Illuminate\Http\RedirectResponse {
-        $credit          = false;
+    ): \Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View|\Illuminate\Contracts\Foundation\Application|\Illuminate\Http\RedirectResponse {
+        $credit = false;
         $paymentGateways = PaymentGateway::with('gatewayOptions')->whereNotIn('id', [1])->where(['status' => Activity::ENABLE])->get();
-        $company         = Settings::group('company')->all();
-        $logo            = ThemeSetting::where(['key' => 'theme_logo'])->first();
-        $faviconLogo     = ThemeSetting::where(['key' => 'theme_favicon_logo'])->first();
-        $currency        = Currency::findOrFail(Settings::group('site')->get('site_default_currency'));
+        $company = Settings::group('company')->all();
+        $logo = ThemeSetting::where(['key' => 'theme_logo'])->first();
+        $faviconLogo = ThemeSetting::where(['key' => 'theme_favicon_logo'])->first();
+        $currency = Currency::findOrFail(Settings::group('site')->get('site_default_currency'));
         if ($order?->user?->balance >= $order->total) {
             $credit = true;
         }
 
         if (blank($order->transaction) && $order->payment_status === PaymentStatus::UNPAID) {
             return view('payment', [
-                'company'         => $company,
-                'logo'            => $logo,
-                'currency'        => $currency,
-                'faviconLogo'     => $faviconLogo,
+                'company' => $company,
+                'logo' => $logo,
+                'currency' => $currency,
+                'faviconLogo' => $faviconLogo,
                 'paymentGateways' => $paymentGateways,
-                'order'           => $order,
-                'creditAmount'    => AppLibrary::currencyAmountFormat($order?->user?->balance),
-                'credit'          => $credit
+                'order' => $order,
+                'creditAmount' => AppLibrary::currencyAmountFormat($order?->user?->balance),
+                'credit' => $credit
             ]);
         }
         return redirect()->route('home')->with('error', trans('all.message.payment_canceled'));
@@ -56,10 +59,26 @@ class PaymentController extends Controller
     public function payment(Order $order, PaymentRequest $request)
     {
         if ($this->paymentManagerService->gateway($request->paymentMethod)->status()) {
-            $className = 'App\\Http\\PaymentGateways\\PaymentRequests\\' . ucfirst($request->paymentMethod);
-            $gateway   = new $className;
-            $request->validate($gateway->rules());
-            return $this->paymentManagerService->gateway($request->paymentMethod)->payment($order, $request);
+            $paymentGateway = PaymentGateway::with('gatewayOptions')->where(['slug' => 'stripe'])->first();
+            $paymentGatewayOption = $paymentGateway->gatewayOptions->pluck('value', 'option');
+            $gateway = new StripeClient\StripeClient($paymentGatewayOption['stripe_secret']);
+            $currencyCode = 'USD';
+            $currencyId = Settings::group('site')->get('site_default_currency');
+            if (!blank($currencyId)) {
+                $currency = Currency::find($currencyId);
+                if ($currency) {
+                    $currencyCode = $currency->code;
+                }
+            }
+
+            $paymentIntent =$gateway->paymentIntents->create([
+                'amount' => (int) $order->total * 100,
+                'currency' => $currencyCode,
+                'automatic_payment_methods' => [
+                    'enabled' => true,
+                ],
+            ]);
+            return response()->json(['clientSecret' => $paymentIntent->client_secret]);
         } else {
             return redirect()->route('payment.index', ['order' => $order])->with(
                 'error',
@@ -85,17 +104,34 @@ class PaymentController extends Controller
 
     public function successful(
         Order $order
-    ): \Illuminate\Contracts\View\Factory | \Illuminate\Contracts\View\View | \Illuminate\Contracts\Foundation\Application | \Illuminate\Http\RedirectResponse {
-        $company     = Settings::group('company')->all();
-        $logo        = ThemeSetting::where(['key' => 'theme_logo'])->first();
+    ): \Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View|\Illuminate\Contracts\Foundation\Application|\Illuminate\Http\RedirectResponse {
+        $company = Settings::group('company')->all();
+        $logo = ThemeSetting::where(['key' => 'theme_logo'])->first();
         $faviconLogo = ThemeSetting::where(['key' => 'theme_favicon_logo'])->first();
+        if (!blank($order->transaction)) {
+            return view('paymentSuccess', [
+                'company' => $company,
+                'logo' => $logo,
+                'faviconLogo' => $faviconLogo,
+                'order' => $order,
+            ]);
+        }
+        return redirect()->route('home')->with('error', trans('all.message.payment_canceled'));
+    }
+    public function stripe_successful(
+        Order $order, $transaction_no
+    ): \Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View|\Illuminate\Contracts\Foundation\Application|\Illuminate\Http\RedirectResponse {
+        $company = Settings::group('company')->all();
+        $logo = ThemeSetting::where(['key' => 'theme_logo'])->first();
+        $faviconLogo = ThemeSetting::where(['key' => 'theme_favicon_logo'])->first();
+        $this->paymentService->payment($order, 'stripe', $transaction_no);
 
         if (!blank($order->transaction)) {
             return view('paymentSuccess', [
-                'company'     => $company,
-                'logo'        => $logo,
+                'company' => $company,
+                'logo' => $logo,
                 'faviconLogo' => $faviconLogo,
-                'order'       => $order,
+                'order' => $order,
             ]);
         }
         return redirect()->route('home')->with('error', trans('all.message.payment_canceled'));

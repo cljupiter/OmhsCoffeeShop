@@ -14,7 +14,6 @@ if (stripeKey) {
 
     function stripe_payment() {
         $('#payment_method').parent().removeClass('has-error');
-        console.log(card, "123123");
         stripe.createToken(card).then(function (result) {
             if (result.error) {
                 let errorElement = document.getElementById('card-errors');

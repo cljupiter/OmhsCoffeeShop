@@ -10,7 +10,7 @@ class PaymentService
 {
     public function payment($order, $gatewaySlug, $transactionNo)
     {
-        $transaction = Transaction::where(['order_id' => $order->id])->first();
+        $transaction = Transaction::where(['order_id' => $order->id, "transaction_no" => $transactionNo])->first();
         if (!$transaction) {
             $transaction = Transaction::create([
                 'order_id'       => $order->id,
