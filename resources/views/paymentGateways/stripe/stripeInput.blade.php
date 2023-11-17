@@ -3,6 +3,6 @@
         <div id="payment-element">
             <!-- Elements will create form elements here -->
         </div>
-        <div id="card-errors" class="text-danger" role="alert"></div>
+        <div id="card-errors" class="text-red-500 mt-2" role="alert"></div>
     </div>
 </fieldset>

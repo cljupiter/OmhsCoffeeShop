@@ -63,7 +63,7 @@ if (stripeKey) {
     }
 
     function stripe_payment() {
-        $("#payment_method").parent().removeClass("has-error");
+        document.getElementById("card-errors").textContent = "";
         stripe
             .confirmPayment({
                 elements,
@@ -71,14 +71,9 @@ if (stripeKey) {
                     return_url: window.location.href,
                 },
             })
-            .then(function (result) {
-                console.log(result);
-                // let errorElement = document.getElementById("card-errors");
-                // if (error.type === "card_error" || error.type === "validation_error") {
-                //     errorElement.textContent = error.message;
-                //   } else {
-                //     errorElement.textContent = "An unexpected error occurred.";
-                //   }
+            .then(function ({ error }) {
+                let errorElement = document.getElementById("card-errors");
+                errorElement.textContent = error.message;
             });
     }
 }

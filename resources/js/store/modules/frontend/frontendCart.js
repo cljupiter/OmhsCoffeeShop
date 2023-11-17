@@ -199,9 +199,13 @@ export const frontendCart = {
         },
         quantity: function (state, payload) {
             if (payload.status === "increment") {
-                if (state.lists[payload.id].quantity === 3) {
-                    state.lists.splice(payload.id, 3);
-                } else {
+                const countOfItems = state.lists.reduce(
+                    (accumulator, currentObject) => {
+                        return parseInt(accumulator) + parseInt(currentObject.quantity);
+                    },
+                    0
+                );
+                if (countOfItems < 3) {
                     state.lists[payload.id].quantity++;
                 }
             } else if (payload.status === "decrement") {
@@ -211,7 +215,7 @@ export const frontendCart = {
                     state.lists[payload.id].quantity--;
                 }
             } else {
-                state.lists[payload.id].quantity = payload.status;
+                state.lists[payload.id].quantity = parseInt(payload.status);
             }
         },
         coupon: function (state, payload) {

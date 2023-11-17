@@ -117,14 +117,16 @@
 import appService from "../../../services/appService";
 import orderTypeEnum from "../../../enums/modules/orderTypeEnum";
 import activityEnum from "../../../enums/modules/activityEnum";
+import alertService from "../../../services/alertService";
 
 export default {
     name: "FrontendCartComponent",
     data() {
+
         return {
             orderTypeEnum: orderTypeEnum,
             activityEnum: activityEnum,
-            localOrderType: null
+            localOrderType: null,
         }
     },
     computed: {
@@ -154,12 +156,28 @@ export default {
             return appService.currencyFormat(amount, decimal, currency, position);
         },
         quantityUp: function (id, e) {
-            if (e.target.value > 0) {
+            const countOfItems = [...this.carts.slice(0, id), ...this.carts.slice(id+1)].reduce((accumulator, currentObject) => {
+                return parseInt(accumulator) + parseInt(currentObject.quantity);
+            }, 0);
+            if (e.target.value > 0 && parseInt(countOfItems) + parseInt(e.target.value) <= 3) {
                 this.$store.dispatch('frontendCart/quantity', {id: id, status: e.target.value}).then().catch();
+            } else {
+                e.target.value = this.carts[id].quantity;
+                alertService.error("Cannot buy more than 3 items at once");
             }
         },
         quantityIncrement: function (id) {
-            this.$store.dispatch('frontendCart/quantity', {id: id, status: "increment"}).then().catch();
+            const countOfItems = this.carts.reduce(
+                    (accumulator, currentObject) => {
+                        return parseInt(accumulator) + parseInt(currentObject.quantity);
+                    },
+                    0
+                );
+            if(countOfItems < 3) {
+                this.$store.dispatch('frontendCart/quantity', {id: id, status: "increment"}).then().catch();
+            } else {
+                alertService.error("Cannot buy more than 3 items at once");
+            }
         },
         quantityDecrement: function (id) {
             this.$store.dispatch('frontendCart/quantity', {id: id, status: "decrement"}).then().catch();

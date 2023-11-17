@@ -569,10 +569,6 @@ export default {
             if (this.temp.quantity <= 0) {
                 this.temp.quantity = 1;
             }
-            this.temp.quantity--;
-            if (this.temp.quantity >= 2) {
-                this.temp.quantity = 2;
-            }
             this.totalPriceSetup();
         },
         addonQuantityUp: function (id) {
@@ -689,33 +685,49 @@ export default {
             }
 
             if (this.itemArrays.length > 0) {
-                this.$store.dispatch("frontendCart/lists", this.itemArrays).then((res) => {
-                    this.item = null;
-                    this.temp.name = "";
-                    this.temp.image = "";
-                    this.temp.item_id = 0;
-                    this.temp.quantity = 0;
-                    this.temp.discount = 0;
-                    this.temp.currency_price = 0;
-                    this.temp.convert_price = 0;
-                    this.temp.item_variations = {
-                        variations: {},
-                        names: {}
-                    };
-                    this.temp.item_extras = {
-                        extras: [],
-                        names: []
-                    };
-                    this.temp.item_variation_total = 0;
-                    this.temp.item_extra_total = 0;
-                    this.temp.total_price = 0;
-                    this.temp.instruction = "";
-                    this.addons = {};
-                    this.itemArrays = [];
+                const countOfItems = this.$store.getters['frontendCart/lists'].reduce(
+                    (accumulator, currentObject) => {
+                        return parseInt(accumulator) + parseInt(currentObject.quantity);
+                    },
+                    0
+                );
+                const countOfNewItems = this.itemArrays.reduce(
+                    (accumulator, currentObject) => {
+                        return parseInt(accumulator) + parseInt(currentObject.quantity);
+                    },
+                    0
+                );
+                if(countOfItems + countOfNewItems <= 3) {
+                    this.$store.dispatch("frontendCart/lists", this.itemArrays).then((res) => {
+                        this.item = null;
+                        this.temp.name = "";
+                        this.temp.image = "";
+                        this.temp.item_id = 0;
+                        this.temp.quantity = 0;
+                        this.temp.discount = 0;
+                        this.temp.currency_price = 0;
+                        this.temp.convert_price = 0;
+                        this.temp.item_variations = {
+                            variations: {},
+                            names: {}
+                        };
+                        this.temp.item_extras = {
+                            extras: [],
+                            names: []
+                        };
+                        this.temp.item_variation_total = 0;
+                        this.temp.item_extra_total = 0;
+                        this.temp.total_price = 0;
+                        this.temp.instruction = "";
+                        this.addons = {};
+                        this.itemArrays = [];
 
-                    alertService.success(this.$t('message.add_to_cart'));
-                    appService.modalHide('#item-variation-modal');
-                }).catch();
+                        alertService.success(this.$t('message.add_to_cart'));
+                        appService.modalHide('#item-variation-modal');
+                    }).catch();
+                } else {
+                    alertService.error("Cannot buy more than 3 items at once");
+                }
             }
         },
     }
