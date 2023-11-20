@@ -24,6 +24,7 @@
     "dependencies": {
         "@vuepic/vue-datepicker": "^3.6.3",
         "babel-loader": "^9.1.0",
+        "date-fns": "^2.30.0",
         "firebase": "^9.18.0",
         "google-maps": "^4.3.3",
         "laravel-vue-pagination": "^4.0.0",

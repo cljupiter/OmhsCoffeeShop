@@ -111,7 +111,7 @@
                                                     <span class="custom-radio-span"></span>
                                                 </div>
                                                 <label for="tomorrow" class="db-field-label text-sm text-heading">
-                                                    {{ $t('label.tomorrow') }}
+                                                    {{ $t(getTomorrowDayOfWeek()) }}
                                                 </label>
                                             </label>
                                         </slide>
@@ -324,6 +324,7 @@ import dayTakeEnum from "../../../enums/modules/dayTakeEnum";
 import isAdvanceOrderEnum from "../../../enums/modules/isAdvanceOrderEnum";
 import sourceEnum from "../../../enums/modules/sourceEnum";
 import {Carousel, Navigation, Pagination, Slide} from "vue3-carousel";
+import { format, addDays } from 'date-fns';
 import AddressComponent from "./AddressComponent";
 import LoadingComponent from "../components/LoadingComponent";
 import labelEnum from "../../../enums/modules/labelEnum";
@@ -603,6 +604,10 @@ export default {
         this.checkoutProps.form.order_type = this.orderType;
     },
     methods: {
+        getTomorrowDayOfWeek() {
+            const tomorrow = addDays(new Date(), 1);
+            return format(tomorrow, 'EEEE').toLowerCase(); // 'EEEE' format gives the full day name (Monday, Tuesday, etc.)
+        },
         branchPosition: function (e) {
             window.setTimeout(() => {
                 this.deliveryChargeCalculation();
